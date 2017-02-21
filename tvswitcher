@@ -1,0 +1,49 @@
+#!/usr/bin/python3
+
+import gi
+import sys
+gi.require_version('GnomeDesktop', '3.0')
+gi.require_version('Gdk', '3.0')
+
+from gi.repository import Gdk
+from gi.repository import GnomeDesktop
+
+DISPLAY_ORDER = [
+    'XXX',
+    'Ancor Communications Inc 27"',
+    'Hewlett Packard 19"'
+]
+
+TV = 'XXX'
+
+
+def switch_tv(enabled):
+    screen = Gdk.Screen.get_default()
+    rr_screen = GnomeDesktop.RRScreen.new(screen)
+    rr_config = GnomeDesktop.RRConfig.new_current(rr_screen)
+    rr_config.load_current()
+    output_map = {}
+    for output in rr_config.get_outputs():
+        display_name = output.get_display_name()
+        if display_name in DISPLAY_ORDER:
+            output_map[DISPLAY_ORDER.index(display_name)] = output
+
+    x_offset = 0
+    for i in range(len(output_map)):
+        output = output_map[i]
+
+        width = output.get_preferred_width()
+        height = output.get_preferred_height()
+
+        output.set_geometry(x_offset, 0, width, height)
+        display_name = output.get_display_name()
+        if display_name == TV:
+            print("Setting {} to enabled={}".format(display_name, enabled))
+            output.set_active(enabled)
+        x_offset += width
+    rr_config.sanitize()
+    rr_config.apply(rr_screen)
+
+
+enabled = sys.argv[1] == '1'
+switch_tv(enabled)
