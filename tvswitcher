@@ -7,6 +7,7 @@ gi.require_version('Gdk', '3.0')
 
 from gi.repository import Gdk
 from gi.repository import GnomeDesktop
+from pulsectl import Pulse
 
 DISPLAY_ORDER = [
     'XXX',
@@ -14,7 +15,43 @@ DISPLAY_ORDER = [
     'Hewlett Packard 19"'
 ]
 
-TV = 'XXX'
+TV = {
+    'name': 'XXX',
+    'card': 'GM204 High Definition Audio Controller',
+    'profile': 'Digital Stereo (HDMI 3) Output',
+}
+
+PC = {
+    'name': 'Ancor Communications Inc 27"',
+    'card': 'Built-in Audio',
+    'profile': 'Analog Stereo Duplex'
+}
+
+
+def get_sink_name(device):
+    sink_name = "{} {}".format(device['card'], device['profile'])
+    for word in ('Output', 'Duplex'):
+        if sink_name.endswith(word):
+            sink_name = sink_name[:-(len(word) + 1)]
+    return sink_name
+
+
+def switch_sound_card(device):
+    with Pulse('tv-switcher') as pulse:
+
+        for card in pulse.card_list():
+            if card.proplist['device.description'] != device['card']:
+                continue
+
+            for profile in card.profile_list:
+                if profile.description == device['profile']:
+                    print("Using profile %s on card %s" % (profile.description, card))
+                    pulse.card_profile_set(card, profile.name)
+
+        for sink in pulse.sink_list():
+            if sink.description == get_sink_name(device):
+                print("Setting default sound output to %s" % sink.description)
+                pulse.default_set(sink)
 
 
 def switch_tv(enabled):
@@ -37,9 +74,13 @@ def switch_tv(enabled):
 
         output.set_geometry(x_offset, 0, width, height)
         display_name = output.get_display_name()
-        if display_name == TV:
+        if display_name == TV['name']:
             print("Setting {} to enabled={}".format(display_name, enabled))
             output.set_active(enabled)
+            if enabled:
+                switch_sound_card(TV)
+            else:
+                switch_sound_card(PC)
         x_offset += width
     rr_config.sanitize()
     rr_config.apply(rr_screen)
