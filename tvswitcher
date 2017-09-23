@@ -2,6 +2,8 @@
 
 import gi
 import sys
+import logging
+
 gi.require_version('GnomeDesktop', '3.0')
 gi.require_version('Gdk', '3.0')
 
@@ -9,10 +11,12 @@ from gi.repository import Gdk
 from gi.repository import GnomeDesktop
 from pulsectl import Pulse
 
+LOG = logging.getLogger(__name__)
+
 DISPLAY_ORDER = [
     'XXX',
     'Ancor Communications Inc 27"',
-    'Hewlett Packard 19"'
+    'Dell Inc. 19"'
 ]
 
 TV = {
@@ -62,8 +66,12 @@ def switch_tv(enabled):
     output_map = {}
     for output in rr_config.get_outputs():
         display_name = output.get_display_name()
+        LOG.debug("Display: %s", display_name)
         if display_name in DISPLAY_ORDER:
             output_map[DISPLAY_ORDER.index(display_name)] = output
+        else:
+            LOG.error("Unknown display '%s'", display_name)
+            return
 
     x_offset = 0
     for i in range(len(output_map)):
